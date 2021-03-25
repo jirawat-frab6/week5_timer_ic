@@ -32,6 +32,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define capturenum 16
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,6 +50,13 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
+uint64_t _micros = 0,timestamp = 0;
+uint16_t capturedata[capturenum] = {0};
+
+int32_t DiffTime[capturenum-1] = {0};
+
+float MeanTime = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,6 +67,10 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM11_Init(void);
 /* USER CODE BEGIN PFP */
+
+uint64_t micros();
+void encorder_speed_reader_cycle();
+
 
 /* USER CODE END PFP */
 
@@ -100,12 +113,26 @@ int main(void)
   MX_TIM11_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_TIM_Base_Start_IT(&htim11); 						// start timer
+
+
+  	  	  	  	  	  	  	  	  	  	  	  	  	  	  //start input capture in DMA
+  HAL_TIM_Base_Start(&htim11);
+  HAL_TIM_IC_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t*) capturedata ,capturenum);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
+	  if(micros() - timestamp > 1000000){				// micro second
+		  timestamp = micros();
+		  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+	  }
+
+	  encorder_speed_reader_cycle();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -330,6 +357,32 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+uint64_t micros(){
+	return _micros + htim11.Instance->CNT; 										// counter of Timer11
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+
+	if(htim == &htim11){
+		_micros += 65535;
+	}
+
+}
+
+void encorder_speed_reader_cycle(){
+	uint32_t CapPos = capturenum - __HAL_DMA_GET_COUNTER(htim1.hdma[TIM_DMA_ID_CC1]);
+	uint32_t sum = 0;
+	for(register int i = 0; i < capturenum-1 ; i++){
+		DiffTime[i] = capturedata[(i+1+CapPos)%capturenum]-capturedata[(i+CapPos)%capturenum];
+		if(DiffTime[i] < 0){
+			DiffTime[i] += (1<<16)-1;
+		}
+		sum += DiffTime[i];
+	}
+	MeanTime = sum/(float)(capturenum-1);
+
+}
 
 /* USER CODE END 4 */
 
