@@ -56,6 +56,7 @@ uint32_t capturedata[capturenum] = {0};
 int32_t DiffTime[capturenum-1] = {0};
 
 float MeanTime = 0;
+double angular_speed = 0,lowest_rpm = 0;
 
 /* USER CODE END PV */
 
@@ -70,7 +71,7 @@ static void MX_TIM5_Init(void);
 
 uint64_t micros();
 void encorder_speed_reader_cycle();
-
+double period_to_rpm();
 
 /* USER CODE END PFP */
 
@@ -120,6 +121,8 @@ int main(void)
   HAL_TIM_Base_Start(&htim5);
   HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, capturedata ,capturenum);
 
+
+  lowest_rpm = period_to_rpm((1<<32)-1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -133,6 +136,7 @@ int main(void)
 	  }
 
 	  encorder_speed_reader_cycle();
+	  angular_speed = period_to_rpm(MeanTime);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -396,6 +400,13 @@ void encorder_speed_reader_cycle(){
 	MeanTime = sum/(float)(capturenum-1);
 
 }
+
+double period_to_rpm(double input_time){
+	double ratio = (double)1/64;
+	return ((double)1/12)*((double)1/input_time)*(1e6*60)*ratio;
+
+}
+
 
 /* USER CODE END 4 */
 
