@@ -122,11 +122,11 @@ int main(void)
   HAL_TIM_IC_Start_DMA(&htim2, TIM_CHANNEL_1, capturedata ,capturenum);
 
 
-  lowest_rpm = period_to_rpm((1<<32)-1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  lowest_rpm = period_to_rpm((double)(1<<16)-1);
 
   while (1)
   {
